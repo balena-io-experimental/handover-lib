@@ -1,8 +1,9 @@
 {
   "name": "handover-lib",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "codename": "handy",
   "private": false,
+  "type": "module",  
   "description": "A handover lib for balena",
   "engines": {
     "node": ">=16.0.0"
