@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import dgram from 'node:dgram';
 import { getLogger, LogContext } from '@balena/jellyfish-logger';
-import { defaultEnvironment as environment } from '@balena/jellyfish-environment';
 import { HandoverMessage } from './handover-message';
 import { networkInterfaces } from 'os';
 const logger = getLogger(__filename);
@@ -174,11 +173,7 @@ export class HandoverPeer {
 					`PID: ${process.pid}. About to write the shutdown file`,
 				);
 
-				const shutMeDownFile =
-					(!environment.isProduction() || environment.isCI()) &&
-					!(process.env.SHUTDOWN_TEST === 'true')
-						? '/tmp/resin-kill-me'
-						: '/tmp/balena/handover-complete'; //  possible paths: /tmp/balena/handover-complete or /tmp/resin/resin-kill-me
+				const shutMeDownFile = '/tmp/balena/handover-complete'; //  possible paths: /tmp/balena/handover-complete or /tmp/resin/resin-kill-me
 				const content = `Shutting down at ${new Date()}`;
 				try {
 					await fs.writeFile(shutMeDownFile, content);

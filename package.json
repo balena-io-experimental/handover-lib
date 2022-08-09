@@ -1,26 +1,45 @@
 {
   "name": "handover-lib",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "codename": "handy",
   "private": false,
-  "type": "module",  
-  "description": "A handover lib for balena",
   "engines": {
     "node": ">=16.0.0"
   },
-  "author": "Balena.io. <hello@balena.io>",
-  "license": "AGPL-3.0",
+  "description": "A handover lib for balena",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build/"
+  ],
+  "directories": {
+    "lib": "lib"
+  },
+  "deplint": {
+    "files": [
+      "lib/**/*.{ts}"
+    ],
+    "modules": [
+      "lib"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "balena-lint --fix"
+    ]
+  },
   "scripts": {
     "clean": "rimraf build",
     "build": "npm run clean && tsc -p tsconfig.build.json",
     "lint": "balena-lint lib test && depcheck --ignore-bin-package --ignores=@types/jest,typedoc",
     "lint:fix": "balena-lint --fix lib test",
-    "test": "catch-uncommitted --skip-node-versionbot-changes && npm run lint && npm run test:integration",
+    "test": "npm run lint && npm run test:unit",
     "doc": "typedoc lib/",
     "prepack": "npm run build"
   },
+  "author": "Balena.io. <hello@balena.io>",
+  "license": "Apache-2.0",
   "dependencies": {
-    "@balena/jellyfish-environment": "^12.1.0",
     "@balena/jellyfish-logger": "^5.1.7",
     "uuid": "^8.3.2"
   },
