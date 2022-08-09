@@ -33,15 +33,6 @@ Note that the "clean shutdown" should be a "nice to have" requirement. The appli
 To recap: the `io.balena.update.handover-timeout` should be configured so that it provides enough time for the new service to be ready to handle connections to avoid downtime, and for the old service to perform its shutdown.
 
 
-## zero-downtime vs clean shutdown on server applications
-
-The handover of the DNS name of the instance will be performed only when the supervisor kills the old container. This means that the new instance gets a new IP address, but until the 
-old container is killed the DNS name assigned to the container by the docker embedded DNS server will refer to the IP address of the old instance.
-
-This behavior produces a conflict between the "zero downtime" and the "clean shutdown" goals for servers, like any HTTP or REST service. If the container handles requests by listening to a network port, then the new instance will start receiving requests only when the old container is killed and the DNS name is updated. This means that while the old conatainer is performing a clean shutdown, there will be downtime because the new container is ready to handle requests but no other clients now about its existence ( the new IP is unknown to them, and the DNS name points to the old instance's IP address), and the old container is shutting down so it will probably fail to process a request or not accept it altogether. So the conflict is between a) doing an orderly shutdown that may produce some downtime if during this process a request is received and b) shutting the container abruptly so that the DNS name switches to the new one making the new instance handle the incoming requests.
-
-For apps who can run concurrently and perform a handover of requests and resources, as in those who consume requests, a clean shutdown can be implemented with no downtime. The old application stops acquiring new tasks and shuts down.
-
 ## HandoverPeer on `bridge` and `host` networks
 
 Networking - On a fleet with several devices running on the same LAN:
