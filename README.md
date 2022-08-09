@@ -1,17 +1,19 @@
 # handover-lib
 
-A HandoverPeer provides a way to coordinate the hand-over between the new and old instances of services that are updated using the "hand-over" update strategy described
+A HandoverPeer provides a way for node apps running on BalenaOS to coordinate the hand-over between the new and old instances of services that are updated using the "hand-over" update strategy described
 at https://www.balena.io/docs/learn/deploy/release-strategy/update-strategies/#hand-over
-
-It implements a simple protocol based on messages broadcasted over UDP. Once its `startBroadcasting` method is called, a `HandoverPeer` will start sending a message 
-which contains it startup timestampto a broadcast or multicast address. Converserly, when a `HandoverPeer` receives a message with a timestamp higher than its own one -
-signal that there's a younger peer running - it will call the configured `shutdownCallback` function and signal to the Balena Supervisor that it's ready to be killed.
 
 ## How to use it
 
 When a service starts, it first will create a `HandoverPeer` instance and calls its `startListening` method with a callback that will shut down the service.
 When the service is ready to accept connections, it will call the `startBroadcasting` method, thus starting to broadcast a packet that contains its
 startup timestamp and letting other peers ( there should be only one active in normal circumstances ) that they should shut down.
+
+HandoverPeer implements a simple protocol based on messages broadcasted over UDP. Once its `startBroadcasting` method is called, a `HandoverPeer` will start sending a message 
+which contains it startup timestampto a broadcast or multicast address. Converserly, when a `HandoverPeer` receives a message with a timestamp higher than its own one -
+a signal that there's a younger peer running - it will call the configured `shutdownCallback` function and signal to the Balena Supervisor that it's ready to be killed,
+thus "handing over" the control to the new instance.
+
 
 ## Using the hand-over update strategy
 
@@ -31,24 +33,16 @@ Note that the "clean shutdown" should be a "nice to have" requirement. The appli
 To recap: the `io.balena.update.handover-timeout` should be configured so that it provides enough time for the new service to be ready to handle connections to avoid downtime, and for the old service to perform its shutdown.
 
 
-### Jellyfish
-
-In Jellyfish,
-each service runs a set of node Worker processes. When a new service starts, it will spawn a set of Workers that will run the initialization code.
-There's a period of time during which the Workers from the old service will consume jobs from the queues that are inserted by the new service, and viceversa.
-
-
-
-## hand-over strategy and DNS
+## zero-downtime vs clean shutdown on server applications
 
 The handover of the DNS name of the instance will be performed only when the supervisor kills the old container. This means that the new instance gets a new IP address, but until the 
-old container is killed the DNS name assigned to the container will refer to the IP address of the old instance.
+old container is killed the DNS name assigned to the container by the docker embedded DNS server will refer to the IP address of the old instance.
 
-This behavior produces a conflict between the "now downtime" and the "clean shutdown" goals. If the container handles requests by listening to a network port, then the new instance will start receiving requests only when the old container is killed and the DNS name is updated. This means that while the old conatainer is performing a clean shutdown, there will be downtime because the new container is ready to handle requests but no other clients now about its existence, and the old container is shutting down. So the conflict is between a) doing an orderly shutdown that may produce some downtime if during this process a request is received and b) shutting the container abruptly so that the DNS name switches to the new one making the new instance handle the incoming requests.
+This behavior produces a conflict between the "zero downtime" and the "clean shutdown" goals for servers, like any HTTP or REST service. If the container handles requests by listening to a network port, then the new instance will start receiving requests only when the old container is killed and the DNS name is updated. This means that while the old conatainer is performing a clean shutdown, there will be downtime because the new container is ready to handle requests but no other clients now about its existence ( the new IP is unknown to them, and the DNS name points to the old instance's IP address), and the old container is shutting down so it will probably fail to process a request or not accept it altogether. So the conflict is between a) doing an orderly shutdown that may produce some downtime if during this process a request is received and b) shutting the container abruptly so that the DNS name switches to the new one making the new instance handle the incoming requests.
 
+For apps who can run concurrently and perform a handover of requests and resources, as in those who consume requests, a clean shutdown can be implemented with no downtime. The old application stops acquiring new tasks and shuts down.
 
 ## HandoverPeer on `bridge` and `host` networks
-
 
 Networking - On a fleet with several devices running on the same LAN:
 
@@ -62,4 +56,12 @@ as the "new one", meaning that in one node both instances will shutdown and recr
 To avoid this, if using an application which has
 host-mode network, you can specify the HANDOVER_NETWORK_MODE=host env var. This will cause the library to use the multicast address only on the
 supervisor0 interface, which is a local bridge network.
+
+## Jellyfish
+
+This library was created to be used on Jellyfish, so it's its primary use case.
+
+In Jellyfish,
+each service runs a set of node Worker processes. When a new service starts, it will spawn a set of Workers that will run the initialization code. The startup time may be higher
+than 10secs, depending primarily on the setup of the bootstrap objects Jellyfish needs. During this period the new instance will be running concurrentlywith the Workers from the old service, and both will consume jobs from the queues. Once the startup of the new service is complete, it will trigger a quick shutdown of the previous instance.
 
