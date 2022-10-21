@@ -19,23 +19,23 @@ const logger = getLogger(__filename);
  * Note that there is an overlap in which both services will be running concurrently, thus the application needs to handle this situation correctly. In Jellyfish,
  * each service runs a set of node Worker processes. When a new service starts, it will spawn another set of Workers that will run the initialization code.
  * There's a period of time during which the Workers from the old service will consume jobs from the queues that are inserted by the new service. Thus it is
- * critical to perform the shutdown in an orderly fashion to avoid lost data.
+ * critical to perform the shutdown in an orderly fashion to avoid losing data.
  *
  * Also note that the handover strategy will kill the old service after the configured `io.balena.update.handover-timeout` so it's important to configura that value
  * so that an orderly shutdown can be performed.
  *
  * Networking - On a fleet with several devices running on the same LAN:
- * 
+ *
  * By default (HANDOVER_NETWORK_MODE=bridge) a multicast address is used; the service listens on all interfaces for updates.
  * In a docker bridge-mode network, the old and new instances will be the only ones using this address.
- * 
+ *
  * If the fleet uses a host-mode network, if there
- * are several devices running the application in the same LAN, like in a fleet, then a multicast address would be be shared by all of the container instances and 
+ * are several devices running the application in the same LAN, like in a fleet, then a multicast address would be be shared by all of the container instances and
  * this would cause only one to be selected
  * as the "new one", meaning that in one node both instances will shutdown and recreated, creating an infinite loop.
  * To avoid this, if using an application which has
  * host-mode network, you can specify the HANDOVER_NETWORK_MODE=host env var. This will cause the library to use the multicast address only on the
- * supervisor0 interface, which is local bridge. 
+ * supervisor0 interface, which is local bridge.
  */
 
 // Following https://www.rfc-editor.org/rfc/rfc2365.html, we use "The IPv4 Organization Local Scope -- 239.192.0.0/14" [ 239.192.0.0, 239.195.255.255 ]
@@ -50,7 +50,6 @@ const NETWORK_INTERFACE = process.env.NETWORK_INTERFACE || 'supervisor0';
 
 const HANDOVER_NETWORK_MODE = process.env.HANDOVER_NETWORK_MODE || 'bridge';
 
-
 export class HandoverPeer {
 	// semaphore, used to avoid starting new tasks if we're shutting down.
 	shuttingDown: boolean = false;
@@ -61,11 +60,14 @@ export class HandoverPeer {
 	heartbeatClientSocket: dgram.Socket;
 	startedAt: Date;
 	handoverMessage: HandoverMessage;
-	context: LogContext = { id: `PID${process.pid}-${'[' + Math.round(Math.random() * 1000) + ']'}-` };
+	context: LogContext = {
+		id: `PID${process.pid}-${'[' + Math.round(Math.random() * 1000) + ']'}-`,
+	};
 
 	constructor(startedAt: Date, context?: LogContext) {
-
-		this.shutdownBroadcastAddress = process.env.SHUTDOWN_BROADCAST_ADDRESS || DEFAULT_SHUTDOWN_BROADCAST_ADDRESS
+		this.shutdownBroadcastAddress =
+			process.env.SHUTDOWN_BROADCAST_ADDRESS ||
+			DEFAULT_SHUTDOWN_BROADCAST_ADDRESS;
 		logger.info(
 			this.context,
 			`Using shutdownBroadcastAddress: ${this.shutdownBroadcastAddress}`,
@@ -147,7 +149,7 @@ export class HandoverPeer {
 
 		this.heartbeatClientSocket.on('message', async (msg) => {
 			const message = HandoverMessage.decodeMessage(msg);
-			// Avoid both suicide and processing heartbeats from old instances
+			// Avoid both committing suicide and processing heartbeats from old instances
 			if (BigInt(message.timestamp) > BigInt(this.startedAt.valueOf())) {
 				if (this.shuttingDown) {
 					return;
@@ -181,9 +183,13 @@ export class HandoverPeer {
 						this.context,
 						`PID: ${process.pid}. shut-me-down file written at ${shutMeDownFile}`,
 					);
-				} catch ( error ) {
+				} catch (error) {
 					// If there's any error just log it and move on; container will be killed by the supervisor
-					logger.warn(this.context, `PID: ${process.pid}. error when writing shut-me-down file ${shutMeDownFile}`, error);
+					logger.warn(
+						this.context,
+						`PID: ${process.pid}. error when writing shut-me-down file ${shutMeDownFile}`,
+						error,
+					);
 				}
 				// We don't exit to avoid docker restarting the process. The container should have a restart policy of `restart: unless-stopped` or `none`
 				logger.info(this.context, `PID: ${process.pid}. Waiting for shutdown`);
@@ -203,35 +209,32 @@ export class HandoverPeer {
 			// The multicastInterface must be a valid string representation of an IP from the socket's family.
 			// For IPv4 sockets, this should be the IP configured for the desired physical interface.
 			// All packets sent to multicast on the socket will be sent on the interface determined by the most recent successful use of this call.
-			if ( HANDOVER_NETWORK_MODE === 'host' ) {
+			if (HANDOVER_NETWORK_MODE === 'host') {
 				const nets = networkInterfaces();
-				if ( !nets ) {
-					logger.warn(
-						this.context,
-						`No networks found`,
-					);			
+				if (!nets) {
+					logger.warn(this.context, `No networks found`);
 				} else {
 					const balenaNet = nets[NETWORK_INTERFACE];
-					if ( !balenaNet) {
+					if (!balenaNet) {
 						logger.warn(
 							this.context,
 							`Network for interface ${NETWORK_INTERFACE} not found`,
-						);			
+						);
 					} else {
-						const balenaipv4 = balenaNet.filter(e => e.family === 'IPv4');
-						if ( !balenaipv4 || !balenaipv4[0] || !balenaipv4[0].address) {
+						const balenaipv4 = balenaNet.filter((e) => e.family === 'IPv4');
+						if (!balenaipv4 || !balenaipv4[0] || !balenaipv4[0].address) {
 							logger.warn(
 								this.context,
 								`Network for interface ${NETWORK_INTERFACE} doesn't have an IPv4 address`,
-							);			
+							);
 						} else {
 							const balena0Addr = balenaipv4[0].address;
 							logger.info(
 								this.context,
 								`Using MulticastInterface ${balena0Addr}`,
-							);			
+							);
 							this.heartbeatClientSocket.setMulticastInterface(balena0Addr);
-							}
+						}
 					}
 				}
 			}
@@ -239,5 +242,3 @@ export class HandoverPeer {
 		});
 	}
 }
-
-

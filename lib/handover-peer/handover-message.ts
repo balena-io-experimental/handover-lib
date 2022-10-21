@@ -1,5 +1,5 @@
 export class HandoverMessage {
-	static TEMPLATE = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]; // 1st byte is the version, 8 bytes for the timestamp
+	static TEMPLATE_V1 = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]; // 1st byte is the version, 8 bytes for the timestamp
 	timestamp = BigInt(new Date().valueOf());
 	buffer: Buffer;
 
@@ -8,7 +8,7 @@ export class HandoverMessage {
 		this.timestamp = BigInt(
 			typeof timestamp === 'string' ? timestamp : timestamp.valueOf(),
 		);
-		this.buffer = Buffer.from(HandoverMessage.TEMPLATE);
+		this.buffer = Buffer.from(HandoverMessage.TEMPLATE_V1);
 		this.buffer.writeBigInt64BE(this.timestamp, 1);
 	}
 
@@ -18,9 +18,9 @@ export class HandoverMessage {
 
 	public static decodeMessage(buffer: Buffer) {
 		const version = buffer[0];
-		if (version !== HandoverMessage.TEMPLATE[0]) {
+		if (version !== HandoverMessage.TEMPLATE_V1[0]) {
 			throw new Error(
-				`version mismatch on HandoverMessage; expected ${HandoverMessage.TEMPLATE[0]} but received ${version}`,
+				`version mismatch on HandoverMessage; expected ${HandoverMessage.TEMPLATE_V1[0]} but received ${version}`,
 			);
 		}
 		const timestamp = buffer.readBigInt64BE(1);

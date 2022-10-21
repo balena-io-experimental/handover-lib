@@ -1,0 +1,76 @@
+{
+  "name": "@balena/jellyfish-logger",
+  "version": "5.1.7",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/product-os/jellyfish-logger.git"
+  },
+  "engines": {
+    "node": ">=12.15.0"
+  },
+  "description": "Logger library for Jellyfish",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build/"
+  ],
+  "directories": {
+    "lib": "lib"
+  },
+  "deplint": {
+    "files": [
+      "lib/**/*.{ts}"
+    ],
+    "modules": [
+      "lib"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "balena-lint --fix"
+    ]
+  },
+  "scripts": {
+    "clean": "rimraf build",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "lint": "balena-lint lib test && deplint",
+    "lint:fix": "balena-lint --fix lib test",
+    "test": "npm run lint && npm run test:unit",
+    "test:unit": "LOGLEVEL=debug jest",
+    "doc": "typedoc lib/ && touch docs/.nojekyll",
+    "prepack": "npm run build"
+  },
+  "author": "Balena.io. <hello@balena.io>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@balena/jellyfish-assert": "^1.2.39",
+    "@balena/jellyfish-environment": "^12.0.12",
+    "@sentry/node": "^6.19.7",
+    "errio": "^1.2.2",
+    "lodash": "^4.17.21",
+    "typed-error": "^3.2.1",
+    "winston": "^3.7.2",
+    "winston-transport": "^4.5.0"
+  },
+  "devDependencies": {
+    "@balena/lint": "^6.2.0",
+    "@types/intercept-stdout": "^0.1.0",
+    "@types/jest": "^28.1.2",
+    "@types/lodash": "^4.14.182",
+    "deplint": "^1.1.3",
+    "intercept-stdout": "^0.1.2",
+    "jest": "^28.1.1",
+    "lint-staged": "^13.0.2",
+    "sentry-testkit": "^3.3.7",
+    "simple-git-hooks": "^2.8.0",
+    "ts-jest": "^28.0.5",
+    "typedoc": "^0.23.1",
+    "typescript": "^4.7.4"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "versionist": {
+    "publishedAt": "2022-06-27T05:30:42.003Z"
+  }
+}
