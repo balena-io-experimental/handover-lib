@@ -64,11 +64,13 @@ export class HandoverStatus {
 			this.startedAt,
 			serviceName,
 			addresses,
+			'UP',
 		);
 		this.serviceDownMessage = new HandoverStatusMessage(
 			this.startedAt,
 			serviceName,
-			[],
+			addresses,
+			'DOWN',
 		);
 
 		if (context) {

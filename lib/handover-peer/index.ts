@@ -27,15 +27,15 @@ const logger = getLogger(__filename);
  * Networking - On a fleet with several devices running on the same LAN:
  *
  * By default (HANDOVER_NETWORK_MODE=bridge) a multicast address is used; the service listens on all interfaces for updates.
- * In a docker bridge-mode network, the old and new instances will be the only ones using this address.
+ * In a docker bridge-mode network, the old and new instances will be the only ones using this address ( the bridge network is local to the device).
  *
- * If the fleet uses a host-mode network, if there
+ * If the container uses a host-mode network, and there
  * are several devices running the application in the same LAN, like in a fleet, then a multicast address would be be shared by all of the container instances and
  * this would cause only one to be selected
  * as the "new one", meaning that in one node both instances will shutdown and recreated, creating an infinite loop.
  * To avoid this, if using an application which has
- * host-mode network, you can specify the HANDOVER_NETWORK_MODE=host env var. This will cause the library to use the multicast address only on the
- * supervisor0 interface, which is local bridge.
+ * host-mode network, you can specify the `HANDOVER_NETWORK_MODE=host` env var. This will cause the library to use the multicast address only on the
+ * supervisor0 interface, which is a "local bridge" network.
  */
 
 // Following https://www.rfc-editor.org/rfc/rfc2365.html, we use "The IPv4 Organization Local Scope -- 239.192.0.0/14" [ 239.192.0.0, 239.195.255.255 ]
@@ -211,6 +211,7 @@ export class HandoverPeer {
 			// All packets sent to multicast on the socket will be sent on the interface determined by the most recent successful use of this call.
 			if (HANDOVER_NETWORK_MODE === 'host') {
 				const nets = networkInterfaces();
+				console.log(`nets: ${JSON.stringify(nets, null, 2)}`);
 				if (!nets) {
 					logger.warn(this.context, `No networks found`);
 				} else {

@@ -12,8 +12,8 @@ test('should work', (done) => {
 	let downReceived = false;
 	handover.startListening(async (message: HandoverStatusMessage) => {
 		console.log(message);
-		upReceived = upReceived || message.addresses.length > 0;
-		downReceived = downReceived || message.addresses.length === 0;
+		upReceived = upReceived || message.status === 'UP';
+		downReceived = downReceived || message.status === 'DOWN';
 		if (upReceived && downReceived) {
 			handover.close();
 			done();
