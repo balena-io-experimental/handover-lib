@@ -132,7 +132,7 @@ export class HandoverStatus {
 						err,
 					);
 				} else {
-					logger.info(
+					logger.debug(
 						this.context,
 						`PID: ${
 							process.pid
