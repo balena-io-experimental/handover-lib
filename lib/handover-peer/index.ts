@@ -124,7 +124,7 @@ export class HandoverPeer {
 						err,
 					);
 				} else {
-					logger.info(
+					logger.debug(
 						this.context,
 						`PID: ${
 							process.pid

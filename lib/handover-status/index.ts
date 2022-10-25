@@ -94,18 +94,19 @@ export class HandoverStatus {
 	}
 
 	public startBroadcastingServiceDown() {
-		if (!this.downTicker) {
-			this.sendServiceDown();
-			this.downTicker = setInterval(this.sendServiceDown.bind(this), 500);
-			logger.info(
-				this.context,
-				`PID: ${
-					process.pid
-				}. downTicker started. timestamp = ${this.startedAt.valueOf()} ( ${
-					this.startedAt
-				} in local time )`,
-			);
+		this.sendServiceDown();
+		if (this.downTicker) {
+			clearInterval(this.downTicker);
 		}
+		this.downTicker = setInterval(this.sendServiceDown.bind(this), 100);
+		logger.info(
+			this.context,
+			`PID: ${
+				process.pid
+			}. downTicker started. timestamp = ${this.startedAt.valueOf()} ( ${
+				this.startedAt
+			} in local time )`,
+		);
 	}
 
 	private sendServiceUp() {
